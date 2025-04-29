@@ -10,7 +10,7 @@ from openai import (
     OpenAIError,
     RateLimitError,
 )
-from openai.types.chat.chat_completion_message import ChatCompletionMessage
+from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -88,16 +88,9 @@ class TokenCounter:
                 width, height = image_item["dimensions"]
                 return self._calculate_high_detail_tokens(width, height)
 
-        # Default values when dimensions aren't available or detail level is unknown
-        if detail == "high":
-            # Default to a 1024x1024 image calculation for high detail
-            return self._calculate_high_detail_tokens(1024, 1024)  # 765 tokens
-        elif detail == "medium":
-            # Default to a medium-sized image for medium detail
-            return 1024  # This matches the original default
-        else:
-            # For unknown detail levels, use medium as default
-            return 1024
+        return (
+            self._calculate_high_detail_tokens(1024, 1024) if detail == "high" else 1024
+        )
 
     def _calculate_high_detail_tokens(self, width: int, height: int) -> int:
         """Calculate tokens for high detail images based on dimensions"""
@@ -735,8 +728,9 @@ class LLM:
                     temperature if temperature is not None else self.temperature
                 )
 
+            params["stream"] = False  # Always use non-streaming for tool requests
             response: ChatCompletion = await self.client.chat.completions.create(
-                **params, stream=False
+                **params
             )
 
             # Check if response is valid
