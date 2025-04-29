@@ -191,10 +191,11 @@ class WebSearch(BaseTool):
         "required": ["query"],
     }
     _search_engine: dict[str, WebSearchEngine] = {
-        "google": GoogleSearchEngine(),
-        "baidu": BaiduSearchEngine(),
+        # "google": GoogleSearchEngine(),
+        # "baidu": BaiduSearchEngine(),
         "duckduckgo": DuckDuckGoSearchEngine(),
-        "bing": BingSearchEngine(),
+        # "bing": BingSearchEngine(),
+        "google": GoogleSearchEngine(),
     }
     content_fetcher: WebContentFetcher = WebContentFetcher()
 

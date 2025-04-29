@@ -235,13 +235,29 @@ class LLM:
     def count_message_tokens(self, messages: List[dict]) -> int:
         return self.token_counter.count_message_tokens(messages)
 
-    def update_token_count(self, input_tokens: int, completion_tokens: int = 0) -> None:
+    def update_token_count(self, usage) -> None:
         """Update token counts"""
         # Only track tokens if max_input_tokens is set
+        input_tokens = usage.prompt_tokens
+        completion_tokens = usage.completion_tokens
         self.total_input_tokens += input_tokens
         self.total_completion_tokens += completion_tokens
+
+        # log more detailed token counts
+        if hasattr(usage, "completion_tokens_details"):
+            if hasattr(usage.completion_tokens_details, "reasoning_tokens"):
+                reasoning_tokens = usage.completion_tokens_details.reasoning_tokens
+        else:
+            reasoning_tokens = 0
+
+        if hasattr(usage, "prompt_tokens_details"):
+            if hasattr(usage.prompt_tokens_details, "cached_tokens"):
+                cached_tokens = usage.prompt_tokens_details.cached_tokens
+        else:
+            cached_tokens = 0
+        
         logger.info(
-            f"Token usage: Input={input_tokens}, Completion={completion_tokens}, "
+            f"Token usage: Input={input_tokens}, Completion={completion_tokens}, Cached={cached_tokens}, Reasoning={reasoning_tokens}, "
             f"Cumulative Input={self.total_input_tokens}, Cumulative Completion={self.total_completion_tokens}, "
             f"Total={input_tokens + completion_tokens}, Cumulative Total={self.total_input_tokens + self.total_completion_tokens}"
         )
@@ -427,7 +443,7 @@ class LLM:
 
                 # Update token counts
                 self.update_token_count(
-                    response.usage.prompt_tokens, response.usage.completion_tokens
+                    response.usage
                 )
 
                 return response.choices[0].message.content

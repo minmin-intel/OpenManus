@@ -35,8 +35,8 @@ class Manus(ToolCallAgent):
         default_factory=lambda: ToolCollection(
             PythonExecute(),
             BrowserUseTool(),
-            StrReplaceEditor(),
-            AskHuman(),
+            # StrReplaceEditor(),
+            # AskHuman(),
             Terminate(),
         )
     )
