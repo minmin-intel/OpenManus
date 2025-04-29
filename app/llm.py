@@ -39,6 +39,8 @@ MULTIMODAL_MODELS = [
     "claude-3-opus-20240229",
     "claude-3-sonnet-20240229",
     "claude-3-haiku-20240307",
+    "Qwen/Qwen2.5-VL-72B-Instruct",
+    "meta-llama/Llama-4-Scout-17B-16E-Instruct"
 ]
 
 
@@ -197,6 +199,9 @@ class LLM:
             self.api_version = llm_config.api_version
             self.base_url = llm_config.base_url
 
+            logger.info(f"LLM model: {self.model}, API type: {self.api_type}, base_url: {self.base_url}")
+            logger.info(f"LLM max_tokens: {self.max_tokens}, temperature: {self.temperature}")
+
             # Add token counting related attributes
             self.total_input_tokens = 0
             self.total_completion_tokens = 0
@@ -243,18 +248,17 @@ class LLM:
         self.total_input_tokens += input_tokens
         self.total_completion_tokens += completion_tokens
 
+        reasoning_tokens = 0
+        cached_tokens = 0
+
         # log more detailed token counts
         if hasattr(usage, "completion_tokens_details"):
             if hasattr(usage.completion_tokens_details, "reasoning_tokens"):
                 reasoning_tokens = usage.completion_tokens_details.reasoning_tokens
-        else:
-            reasoning_tokens = 0
-
+            
         if hasattr(usage, "prompt_tokens_details"):
             if hasattr(usage.prompt_tokens_details, "cached_tokens"):
-                cached_tokens = usage.prompt_tokens_details.cached_tokens
-        else:
-            cached_tokens = 0
+                cached_tokens = usage.prompt_tokens_details.cached_tokens  
         
         logger.info(
             f"Token usage: Input={input_tokens}, Completion={completion_tokens}, Cached={cached_tokens}, Reasoning={reasoning_tokens}, "
@@ -449,7 +453,7 @@ class LLM:
                 return response.choices[0].message.content
 
             # Streaming request, For streaming, update estimated token count before making the request
-            self.update_token_count(input_tokens)
+            self.update_token_count(response.usage)
 
             response = await self.client.chat.completions.create(**params, stream=True)
 
@@ -611,11 +615,11 @@ class LLM:
                 if not response.choices or not response.choices[0].message.content:
                     raise ValueError("Empty or invalid response from LLM")
 
-                self.update_token_count(response.usage.prompt_tokens)
+                self.update_token_count(response.usage)
                 return response.choices[0].message.content
 
             # Handle streaming request
-            self.update_token_count(input_tokens)
+            self.update_token_count(response.usage)
             response = await self.client.chat.completions.create(**params)
 
             collected_messages = []
@@ -703,6 +707,7 @@ class LLM:
             else:
                 messages = self.format_messages(messages, supports_images)
 
+            # print(f"Messages:\n{messages}")
             # Calculate input token count
             input_tokens = self.count_message_tokens(messages)
 
@@ -736,6 +741,8 @@ class LLM:
                 **kwargs,
             }
 
+            # print(params)
+
             if self.model in REASONING_MODELS:
                 params["max_completion_tokens"] = self.max_tokens
             else:
@@ -757,7 +764,7 @@ class LLM:
 
             # Update token counts
             self.update_token_count(
-                response.usage.prompt_tokens, response.usage.completion_tokens
+                response.usage
             )
 
             return response.choices[0].message
