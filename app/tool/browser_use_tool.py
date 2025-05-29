@@ -10,7 +10,7 @@ from browser_use.dom.service import DomService
 from pydantic import Field, field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from app.config import config
+from app.config import config, PROJECT_ROOT
 from app.llm import LLM
 from app.tool.base import BaseTool, ToolResult
 from app.tool.web_search import WebSearch
@@ -141,7 +141,7 @@ class BrowserUseTool(BaseTool, Generic[Context]):
     async def _ensure_browser_initialized(self) -> BrowserContext:
         """Ensure browser and context are initialized."""
         if self.browser is None:
-            browser_config_kwargs = {"headless": False, "disable_security": True}
+            browser_config_kwargs = {"headless": True, "disable_security": True}
 
             if config.browser_config:
                 from browser_use.browser.browser import ProxySettings
@@ -507,7 +507,27 @@ Page content:
             screenshot = await page.screenshot(
                 full_page=True, animations="disabled", type="jpeg", quality=100
             )
-
+            
+            # Save screenshot to local directory
+            from pathlib import Path
+            import os
+            import datetime
+            
+            # Create screenshots directory if it doesn't exist
+            current_datetime = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+            screenshots_dir = Path(PROJECT_ROOT) / "logs" / f"screenshots_{current_datetime}"
+            os.makedirs(screenshots_dir, exist_ok=True)
+            
+            # Generate a unique filename based on timestamp and URL
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            url_part = state.url.replace("://", "_").replace("/", "_").replace(".", "_")[:50]
+            filename = f"{timestamp}_{url_part}.jpg"
+            filepath = screenshots_dir / filename
+            
+            # Save the screenshot
+            with open(filepath, "wb") as f:
+                f.write(screenshot)
+                
             screenshot = base64.b64encode(screenshot).decode("utf-8")
 
             # Build the state info with all required fields
@@ -529,7 +549,25 @@ Page content:
                     + viewport_height,
                 },
                 "viewport_height": viewport_height,
+                "screenshot_saved_to": str(filepath),
             }
+            
+            # Log state_info to a JSON file with timestamp in both directory and filename
+            current_datetime = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+            logs_dir = Path(PROJECT_ROOT) / "logs"/ f"browser_logs_{current_datetime}"
+            os.makedirs(logs_dir, exist_ok=True)
+            
+            # Create a filename with timestamp
+            state_log_timestamp = datetime.datetime.now().strftime("%H%M%S")
+            state_log_filename = f"state_log_{state_log_timestamp}.json"
+            state_log_filepath = logs_dir / state_log_filename
+            
+            # Save state_info as JSON file
+            with open(state_log_filepath, "w", encoding="utf-8") as f:
+                json.dump(state_info, f, indent=4, ensure_ascii=False)
+                
+            # Add the log file path to state_info
+            state_info["state_log_file"] = str(state_log_filepath)
 
             return ToolResult(
                 output=json.dumps(state_info, indent=4, ensure_ascii=False),
