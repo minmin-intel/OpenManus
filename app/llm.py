@@ -39,6 +39,8 @@ MULTIMODAL_MODELS = [
     "claude-3-opus-20240229",
     "claude-3-sonnet-20240229",
     "claude-3-haiku-20240307",
+    "Qwen/Qwen2.5-VL-72B-Instruct",
+    "meta-llama/Llama-4-Scout-17B-16E-Instruct"
 ]
 
 
@@ -719,6 +721,8 @@ class LLM:
                 "timeout": timeout,
                 **kwargs,
             }
+
+            print(params)
 
             if self.model in REASONING_MODELS:
                 params["max_completion_tokens"] = self.max_tokens

@@ -18,7 +18,6 @@ async def main():
         username: admin
         password: admin1234
         Then, find out What are the top-3 best-selling product in **Jan 2023**? Today is May 2025.
-        Tip: you can type in dates instead of clicking on the calendar.
 """
         await agent.run(prompt)
         logger.info("Request processing completed.")

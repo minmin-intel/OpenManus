@@ -549,7 +549,7 @@ Page content:
                     + viewport_height,
                 },
                 "viewport_height": viewport_height,
-                "screenshot_saved_to": str(filepath),
+                # "screenshot_saved_to": str(filepath),
             }
             
             # Log state_info to a JSON file with timestamp in both directory and filename
